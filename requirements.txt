@@ -1,6 +1,7 @@
 Flask
 flask-cors
 pandas
-# numpy==1.24.2
+numpy
 scikit-learn
-# tensorflow
+requests
+yfinance

@@ -1,9 +1,6 @@
-import argparse
 import urllib
-# import urllib2
 import json
 import datetime
-import random
 import os
 import pickle
 from datetime import timedelta
@@ -37,7 +34,7 @@ class TwitterData:
         self.allTweets = {}
         for i in range(0, len(self.weekDates)):
             self.weekTweets = {}
-            path_to_file = '../Data/Tweets_' + keyword + '_' + self.weekDates[i] + '.txt'
+            path_to_file = './Data/Tweets_' + keyword + '_' + self.weekDates[i] + '.txt'
             if not exists(path_to_file):
                 params = {'start_time': self.weekDates[i] + 'T05:00:00Z', 'end_time': self.weekDates[i] + 'T23:59:59Z'}
                 time.sleep(3)

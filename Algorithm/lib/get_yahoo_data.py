@@ -1,6 +1,5 @@
 import yfinance as yf
-import datetime
-from datetime import timedelta
+
 
 class YahooData:
     def __init__(self, startDate, endDate):

@@ -6,7 +6,7 @@ from Algorithm.lib import get_yahoo_data
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sklearn import svm
-from sklearn.preprocessing import LabelEncoder
+# from sklearn.preprocessing import LabelEncoder
 #
 from urllib.request import urlopen
 from zipfile import ZipFile
@@ -16,7 +16,12 @@ import csv
 import re
 import numpy as np
 import datetime
-from os.path import exists
+import pandas as pd
+
+# from os.path import exists
+
+global poly
+global X_to_process, sc_y
 
 
 def train_model(currentyO, currencyD, dateI, dateF):
@@ -33,6 +38,8 @@ def train_model(currentyO, currencyD, dateI, dateF):
     yahoo_high_price = {}
     yahoo_low_price = {}
     yahoo_volume_price = {}
+
+    # dates_array = historical_data.index.values
 
     for i in range(len(historical_data)):
         # date = historical_data.index[i]
@@ -57,24 +64,35 @@ def train_model(currentyO, currencyD, dateI, dateF):
     sentiment_dic = createFatureMatrix(date_tweet_details, yahoo_close_price, yahoo_high_price, yahoo_low_price,
                                        yahoo_open_price)
 
+    # print(sentiment_dic)
+    global X_analysys, Y_analysys
     X_analysys = []
     Y_analysys = []
+    dates_ = []
 
     for key in sentiment_dic:
         X_analysys.append(np.array(sentiment_dic[key][:-1]))
         Y_analysys.append(sentiment_dic[key][-1:][0])
+        dates_.append(key)
+
+    dates_training, dates_test = train_test_split(dates_, train_size=0.8, random_state=None, shuffle=False)
 
     sc_x = MinMaxScaler(feature_range=(0.1, 1))
+    global sc_y, X_to_process
     sc_y = MinMaxScaler(feature_range=(0.1, 1))
 
     X_to_process = sc_x.fit_transform(X_analysys)
     Y_to_process = sc_y.fit_transform(np.reshape(Y_analysys, (-1, 1)))
 
+    # print(X_to_process)
+    # print('--------------')
+    # print(Y_to_process)
+
     X_train_a, X_test_a, y_train_a, y_test_a = train_test_split(X_to_process, Y_to_process, train_size=0.8,
                                                                 shuffle=False)
-    label_encoder = LabelEncoder()
-    y_train_a_labeled = label_encoder.fit_transform(np.array(y_train_a))
-
+    # label_encoder = LabelEncoder()
+    # y_train_a_labeled = label_encoder.fit_transform(np.array(y_train_a))
+    global poly
     poly = svm.SVR(kernel='rbf', C=200.0, gamma='auto').fit(X_train_a,
                                                             y_train_a)  # , gamma='scale', decision_function_shape='ovr'
     preditec_y = poly.predict(X_test_a)
@@ -82,9 +100,24 @@ def train_model(currentyO, currencyD, dateI, dateF):
     # result = sc_y.inverse_transform(label_encoder.inverse_transform(preditec_y).reshape(-1, 1))
     result = sc_y.inverse_transform(preditec_y.reshape(-1, 1))
 
-    print(result)
+    print(dates_test)
 
-    return result
+    return result, sc_y.inverse_transform(y_test_a.reshape(-1, 1)), dates_test
+
+
+def make_prediction(prediction_days=3):
+    global X_to_process, poly, sc_y
+    prediction = poly.predict(X_to_process[-prediction_days:])
+    return sc_y.inverse_transform(prediction.reshape(1, -1)).ravel(), add_day_to_dates(prediction_days)
+
+
+def add_day_to_dates(prediction_days):
+    _dates = np.array([])
+    lastDate = datetime.datetime.now()
+    for i in range(prediction_days):
+        newDate = pd.to_datetime(lastDate) + pd.DateOffset(days=i + 1)
+        _dates = np.append(_dates, newDate)
+    return _dates.astype('datetime64[D]')
 
 
 def processTweets(tweet_s):
@@ -92,8 +125,8 @@ def processTweets(tweet_s):
     sentiment_analyzer(tweet_s, downloadAFINN())
     print("Preparing dataset....")
     # Read the tweets one by one and process it
-    inpTweets = csv.reader(open('../Data/SampleTweets.csv', 'r', encoding='utf-8'), delimiter=',')
-    stopWords = getStopWordList('../Data/stopwords.txt')
+    inpTweets = csv.reader(open('./Data/SampleTweets.csv', 'r', encoding='utf-8'), delimiter=',')
+    stopWords = getStopWordList('./Data/stopwords.txt')
     featureList = []
     labelList = []
     tweets = []
@@ -182,9 +215,9 @@ def prepareDataset(date_split, list_tweet, yahoo_close_price, yahoo_open_price, 
             file.write(str(date_PosCount) + "," + str(date_NegCount) + "," + str(date_NutCount) + "," + str(
                 date_totalCount) + "," + str(market_status) + "\n")
 
-        file.close()
-        print("Dataset is ready for stock prediction \n")
-        return date_tweet_details
+    file.close()
+    print("Dataset is ready for stock prediction \n")
+    return date_tweet_details
 
 
 def createFatureMatrix(date_tweet_details, yahoo_close_price, yahoo_high_price, yahoo_low_price, yahoo_open_price):
@@ -236,7 +269,7 @@ def configure_env():
     with open("config.json", "w") as outfile:
         outfile.write(json_object)
 
-        makemydir('../Data/')
+        # makemydir('./Data/')
 
 
 def getStopWordList(stopWordListFileName):
@@ -285,19 +318,16 @@ def extract_features(tweet, featureList):
 
 
 def downloadAFINN():
-    file_exists = exists('../AFINN/AFINN-111.txt')
+    # Download the AFINN lexicon, unzip, and read the latest word list in AFINN-111.txt
+    url = urlopen('http://www2.compute.dtu.dk/~faan/data/AFINN.zip')
+    zipfile = ZipFile(BytesIO(url.read()))
+    afinn_file = zipfile.open('AFINN/AFINN-111.txt')
 
-    if file_exists is False:
-        # Download the AFINN lexicon, unzip, and read the latest word list in AFINN-111.txt
-        url = urlopen('http://www2.compute.dtu.dk/~faan/data/AFINN.zip')
-        zipfile = ZipFile(BytesIO(url.read()))
-        afinn_file = zipfile.open('../AFINN/AFINN-111.txt')
-
-        afinn = dict()
-        for line in afinn_file:
-            parts = line.decode("utf-8").strip().split()
-            if len(parts) == 2:
-                afinn[parts[0]] = int(parts[1])
+    afinn = dict()
+    for line in afinn_file:
+        parts = line.decode("utf-8").strip().split()
+        if len(parts) == 2:
+            afinn[parts[0]] = int(parts[1])
 
     return afinn
 
@@ -315,7 +345,7 @@ def afinn_sentiment(terms, afinn):
 
 
 def sentiment_analyzer(tweet_s, afinn):
-    csvFile = open('../Data/SampleTweets.csv', 'w', encoding='utf8', newline='')
+    csvFile = open('./Data/SampleTweets.csv', 'w', encoding='utf8', newline='')
     csvWriter = csv.writer(csvFile)
 
     tokens = [tokenize(t) for t in tweet_s]  # Tokenize all the tweets
