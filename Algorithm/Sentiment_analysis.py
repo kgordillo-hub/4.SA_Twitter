@@ -17,6 +17,7 @@ import re
 import numpy as np
 import datetime
 import pandas as pd
+import requests
 
 # from os.path import exists
 
@@ -256,6 +257,10 @@ def processTweet(tweet):
 
 
 def configure_env():
+    makemydir('./Data/')
+    URL = 'https://raw.githubusercontent.com/kgordillo-hub/Sentiment-Analysis-Twitter/master/Data/stopwords.txt'
+    response = requests.get(URL)
+    open("./Data/stopwords.txt", "wb").write(response.content)
     # Data to be written
     dictionary = {
         "token_type": "bearer",
@@ -269,7 +274,6 @@ def configure_env():
     with open("config.json", "w") as outfile:
         outfile.write(json_object)
 
-        # makemydir('./Data/')
 
 
 def getStopWordList(stopWordListFileName):
