@@ -264,7 +264,7 @@ def configure_env():
     # Data to be written
     dictionary = {
         "token_type": "bearer",
-        "access_token": "AAAAAAAAAAAAAAAAAAAAAD7pZgEAAAAA9HU%2FFy%2FYrnqHoqpVpWOiLNoKxHQ%3DN3BOBIm0hOAymribtM6uUCpscx0X5iDjDfUXoh6WSIAZDi78oc"
+        "access_token": "<Token_here>"
     }
 
     # Serializing json
